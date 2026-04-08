@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>load all heros</h1>
+    <button onclick="loadHeroes()">load heroes</button>
+    <ul id="list"></ul>
+
+    <h1>ADD HERO</h1>
+    <input type="text" id="name" placeholder="name" />
+    <input type="text" id="role" placeholder="role" />
+    <button onclick="addHero()">submit</button>
+  </body>
+  <script>
+    //get all data/////////////////////////////////////////////////////////////
+    async function loadHeroes() {
+      //fetch responce form back end
+      const res = await fetch('https://localhost:3000/api/heroes');
+      //parse response
+      const data = await res.json();
+      //display data to html
+      const list = document.getElementById('list');
+      list.innerHTML = '';
+      data.forEach((hero) => {
+        const li = document.createElement('li');
+        li.textContent = `hero name: ${hero.name} --- hero role: ${hero.role}<button>delete</button>`;
+        list.appendChild(li);
+      });
+    }
+    ///////////////////////////////////////////////////////////////////////////////////
+    async function addHero() {
+      //////////GET HTML ELEMENT VALUE//////////////////////////////////////////////////
+      const name = document.getElementById('name').value;
+      const role = document.getElementById('role').value;
+
+      const res = await fetch('https://localhost:3000/api/heroes', {
+        method: 'POST', ////////////////VERY IMPORTANT FOR AUTHENTICATION
+        headers: {
+          'content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, role }),
+      });
+      const data = await res.json();
+      console.log(data);
+      loadHeroes();
+    }
+  </script>
+</html>
