@@ -1,53 +1,294 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-  </head>
-  <body>
-    <h1>load all heros</h1>
-    <button onclick="loadHeroes()">load heroes</button>
-    <ul id="list"></ul>
+<head>
+<meta charset="UTF-8">
+<title>Game Characters Viewer</title>
 
-    <h1>ADD HERO</h1>
-    <input type="text" id="name" placeholder="name" />
-    <input type="text" id="role" placeholder="role" />
-    <button onclick="addHero()">submit</button>
-  </body>
-  <script>
-    //get all data/////////////////////////////////////////////////////////////
-    async function loadHeroes() {
-      //fetch responce form back end
-      const res = await fetch('https://localhost:3000/api/heroes');
-      //parse response
-      const data = await res.json();
-      //display data to html
-      const list = document.getElementById('list');
-      list.innerHTML = '';
-      data.forEach((hero) => {
-        const li = document.createElement('li');
-        li.textContent = `hero name: ${hero.name} --- hero role: ${hero.role}<button>delete</button>`;
-        list.appendChild(li);
-      });
-    }
-    ///////////////////////////////////////////////////////////////////////////////////
-    async function addHero() {
-      //////////GET HTML ELEMENT VALUE//////////////////////////////////////////////////
-      const name = document.getElementById('name').value;
-      const role = document.getElementById('role').value;
+<style>
+* {
+  box-sizing: border-box;
+}
 
-      const res = await fetch('https://localhost:3000/api/heroes', {
-        method: 'POST', ////////////////VERY IMPORTANT FOR AUTHENTICATION
-        headers: {
-          'content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, role }),
-      });
-      const data = await res.json();
-      console.log(data);
-      loadHeroes();
-    }
-  </script>
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f5f7fb;
+  margin: 0;
+  padding: 20px;
+  color: #333;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* CARD STYLE */
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* INPUTS */
+input {
+  padding: 10px;
+  margin: 5px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  width: 180px;
+}
+
+/* BUTTONS */
+button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+/* COLORS */
+.btn-add { background: #4CAF50; color: white; }
+.btn-update { background: #2196F3; color: white; }
+.btn-delete { background: #f44336; color: white; }
+.btn-edit { background: #ff9800; color: white; }
+.btn-filter { background: #673ab7; color: white; }
+
+/* TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  background: #f0f2f5;
+}
+
+tr {
+  border-bottom: 1px solid #eee;
+}
+
+tr:hover {
+  background: #fafafa;
+}
+
+/* FLEX */
+.flex {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.space-between {
+  justify-content: space-between;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🎮 Game Characters Viewer</h1>
+
+<div class="card">
+  <h3>Add / Update Character</h3>
+  <div class="flex">
+    <input type="number" id="id" placeholder="ID (edit)">
+    <input type="text" id="name" placeholder="Name">
+    <input type="text" id="role" placeholder="Role">
+    <input type="text" id="difficulty" placeholder="Difficulty">
+    <input type="number" id="rating" placeholder="Rating">
+  </div>
+  <br>
+  <button class="btn-add" onclick="addCharacter()">Add</button>
+  <button class="btn-update" onclick="updateCharacter()">Update</button>
+</div>
+
+<div class="card">
+  <h3>All Characters</h3>
+  <table id="characters-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Difficulty</th>
+        <th>Rating</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Filter by Role</h3>
+  <input type="text" id="filter-role" placeholder="Enter role">
+  <button class="btn-filter" onclick="filterByRole()">Filter</button>
+  <button class="btn-delete" onclick="deleteByRole()">Delete All</button>
+
+  <table id="role-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Difficulty</th>
+        <th>Rating</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+const API_URL = '/api/characters';
+
+// LOAD
+async function fetchCharacters() {
+  const res = await fetch(API_URL);
+  const data = await res.json();
+
+  const tbody = document.querySelector('#characters-table tbody');
+  tbody.innerHTML = '';
+
+  data.forEach(c => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${c.id}</td>
+        <td>${c.name}</td>
+        <td>${c.role}</td>
+        <td>${c.difficulty}</td>
+        <td>${c.rating}</td>
+        <td>
+          <button class="btn-edit" onclick="editCharacter(${c.id})">Edit</button>
+          <button class="btn-delete" onclick="deleteCharacter(${c.id})">Delete</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+// EDIT
+async function editCharacter(id) {
+  const res = await fetch(`${API_URL}/${id}`);
+  const c = await res.json();
+
+  document.getElementById('id').value = c.id;
+  document.getElementById('name').value = c.name;
+  document.getElementById('role').value = c.role;
+  document.getElementById('difficulty').value = c.difficulty;
+  document.getElementById('rating').value = c.rating;
+}
+
+// GET DATA
+function getFormData() {
+  return {
+    name: document.getElementById('name').value.trim(),
+    role: document.getElementById('role').value.trim(),
+    difficulty: document.getElementById('difficulty').value.trim(),
+    rating: parseFloat(document.getElementById('rating').value) || 0
+  };
+}
+
+// ADD
+async function addCharacter() {
+  const data = getFormData();
+  if (!data.name || !data.role || !data.difficulty) return alert('Fill all fields');
+
+  await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+
+  fetchCharacters();
+  reset();
+}
+
+// UPDATE
+async function updateCharacter() {
+  const id = document.getElementById('id').value;
+  if (!id) return alert('Click Edit first');
+
+  const data = getFormData();
+
+  await fetch(`${API_URL}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+
+  fetchCharacters();
+  reset();
+}
+
+// DELETE
+async function deleteCharacter(id) {
+  if (!confirm('Delete?')) return;
+  await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+  fetchCharacters();
+}
+
+// FILTER
+async function filterByRole() {
+  const role = document.getElementById('filter-role').value.trim();
+  if (!role) return alert('Enter role');
+
+  const res = await fetch(`${API_URL}/role/${role}`);
+  const data = await res.json();
+
+  const tbody = document.querySelector('#role-table tbody');
+  tbody.innerHTML = '';
+
+  data.forEach(c => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${c.id}</td>
+        <td>${c.name}</td>
+        <td>${c.role}</td>
+        <td>${c.difficulty}</td>
+        <td>${c.rating}</td>
+      </tr>
+    `;
+  });
+}
+
+// DELETE BY ROLE
+async function deleteByRole() {
+  const role = document.getElementById('filter-role').value.trim();
+  if (!role) return alert('Enter role');
+
+  await fetch(`${API_URL}/role/${role}`, { method: 'DELETE' });
+
+  fetchCharacters();
+  document.querySelector('#role-table tbody').innerHTML = '';
+}
+
+// RESET
+function reset() {
+  document.getElementById('id').value = '';
+  document.getElementById('name').value = '';
+  document.getElementById('role').value = '';
+  document.getElementById('difficulty').value = '';
+  document.getElementById('rating').value = '';
+}
+
+fetchCharacters();
+</script>
+
+</body>
 </html>
