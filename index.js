@@ -1,93 +1,150 @@
 const express = require('express');
+const mysql = require('mysql2');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const path = require('path');
+require('dotenv').config();
 
 const app = express();
-const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'Ramos')));
+app.use(express.static('Ramos'));
 
-// Data
-let characters = [
-  { id: 1, name: 'Balmond', role: 'Fighter', difficulty: 'Medium', rating: 4.5 },
-  { id: 2, name: 'Eudora', role: 'Mage', difficulty: 'Easy', rating: 4.2 },
-  { id: 3, name: 'Argus', role: 'Fighter', difficulty: 'Medium', rating: 4.0 },
-  { id: 4, name: 'Layla', role: 'Marksman', difficulty: 'Easy', rating: 4.1 }
-];
-
-// GET all
-app.get('/api/characters', (req, res) => res.json(characters));
-
-// GET by ID
-app.get('/api/characters/:id', (req, res) => {
-  const char = characters.find(c => c.id == req.params.id);
-  if (!char) return res.status(404).json({ message: 'Not found' });
-  res.json(char);
+/* ================= MYSQL ================= */
+const db = mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME
 });
 
-// ADD
-app.post('/api/characters', (req, res) => {
-  const { name, role, difficulty, rating } = req.body;
+db.connect(() => console.log("✅ DB Connected"));
 
-  if (!name || !role || !difficulty) {
-    return res.status(400).json({ message: 'Missing fields' });
+/* ================= AUTH MIDDLEWARE ================= */
+function auth(req, res, next) {
+  const token = req.headers.authorization;
+
+  if (!token) return res.status(401).json({ message: "No token" });
+
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(403).json({ message: "Invalid token" });
   }
+}
 
-  const newChar = {
-    id: characters.length ? Math.max(...characters.map(c => c.id)) + 1 : 1,
-    name,
-    role,
-    difficulty,
-    rating: rating || 0
-  };
+/* ================= REGISTER ================= */
+app.post('/api/register', async (req, res) => {
+  const { username, password } = req.body;
 
-  characters.push(newChar);
-  res.json(newChar);
+  const hashed = await bcrypt.hash(password, 10);
+
+  db.query(
+    "INSERT INTO users (username, password) VALUES (?,?)",
+    [username, hashed],
+    (err) => {
+      if (err) return res.status(500).json(err);
+      res.json({ message: "Registered" });
+    }
+  );
 });
 
-// UPDATE
-app.put('/api/characters/:id', (req, res) => {
-  const index = characters.findIndex(c => c.id == req.params.id);
-  if (index === -1) return res.status(404).json({ message: 'Not found' });
+/* ================= LOGIN ================= */
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
 
+  db.query(
+    "SELECT * FROM users WHERE username=?",
+    [username],
+    async (err, result) => {
+      if (err || result.length === 0)
+        return res.status(400).json({ message: "User not found" });
+
+      const user = result[0];
+      const valid = await bcrypt.compare(password, user.password);
+
+      if (!valid)
+        return res.status(400).json({ message: "Wrong password" });
+
+      const token = jwt.sign(
+        { id: user.id, username: user.username },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      res.json({ token });
+    }
+  );
+});
+
+/* ================= CHARACTERS ================= */
+
+/* GET ALL */
+app.get('/api/characters', auth, (req, res) => {
+  db.query("SELECT * FROM characters", (err, result) => {
+    res.json(result);
+  });
+});
+
+/* ADD */
+app.post('/api/characters', auth, (req, res) => {
   const { name, role, difficulty, rating } = req.body;
 
-  characters[index] = {
-    id: characters[index].id,
-    name,
-    role,
-    difficulty,
-    rating: rating || 0
-  };
-
-  res.json(characters[index]);
-});
-
-// DELETE ONE
-app.delete('/api/characters/:id', (req, res) => {
-  characters = characters.filter(c => c.id != req.params.id);
-  res.json({ message: 'Deleted' });
-});
-
-// FILTER BY ROLE
-app.get('/api/characters/role/:role', (req, res) => {
-  const filtered = characters.filter(
-    c => c.role.toLowerCase() === req.params.role.toLowerCase()
+  db.query(
+    "INSERT INTO characters (name, role, difficulty, rating) VALUES (?,?,?,?)",
+    [name, role, difficulty, rating],
+    (err) => {
+      if (err) return res.status(500).json(err);
+      res.json({ message: "Added" });
+    }
   );
-  res.json(filtered);
 });
 
-// DELETE ALL BY ROLE
-app.delete('/api/characters/role/:role', (req, res) => {
-  const role = req.params.role.toLowerCase();
+/* UPDATE */
+app.put('/api/characters/:id', auth, (req, res) => {
+  const { name, role, difficulty, rating } = req.body;
 
-  characters = characters.filter(
-    c => c.role.toLowerCase() !== role
+  db.query(
+    "UPDATE characters SET name=?, role=?, difficulty=?, rating=? WHERE id=?",
+    [name, role, difficulty, rating, req.params.id],
+    (err) => {
+      if (err) return res.status(500).json(err);
+      res.json({ message: "Updated" });
+    }
   );
-
-  res.json({ message: `All ${role} deleted` });
 });
 
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+/* DELETE */
+app.delete('/api/characters/:id', auth, (req, res) => {
+  db.query("DELETE FROM characters WHERE id=?", [req.params.id], () => {
+    res.json({ message: "Deleted" });
+  });
+});
+
+/* ROLE FILTER */
+app.get('/api/characters/role/:role', auth, (req, res) => {
+  db.query(
+    "SELECT * FROM characters WHERE role=?",
+    [req.params.role],
+    (err, result) => {
+      res.json(result);
+    }
+  );
+});
+
+/* STATS */
+app.get('/api/stats', auth, (req, res) => {
+  db.query("SELECT COUNT(*) AS total FROM characters", (err, t) => {
+    db.query("SELECT AVG(rating) AS avgRating FROM characters", (err, a) => {
+      res.json({
+        total: t[0].total,
+        avg: a[0].avgRating
+      });
+    });
+  });
+});
+
+/* ================= SERVER ================= */
+app.listen(3000, () => console.log("🚀 Running on port 3000"));

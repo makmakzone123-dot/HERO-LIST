@@ -1,294 +1,486 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Game Characters Viewer</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SafeRoute — Admin Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- ═══════════════════════════════════════════════
+       LOGIN SCREEN
+  ═══════════════════════════════════════════════ -->
+    <div id="loginScreen" class="login-wrap">
+      <div class="login-bg"></div>
+      <div class="login-card">
+        <div class="login-logo">
+          <div class="login-logo-icon">🚸</div>
+          <div>
+            <h1>SafeRoute</h1>
+            <small>Admin Portal</small>
+          </div>
+        </div>
 
-<style>
-* {
-  box-sizing: border-box;
-}
+        <div class="login-tabs">
+          <div class="login-tab active" onclick="switchAuthTab('login')">
+            Sign In
+          </div>
+          <div class="login-tab" onclick="switchAuthTab('register')">
+            Register
+          </div>
+        </div>
 
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #f5f7fb;
-  margin: 0;
-  padding: 20px;
-  color: #333;
-}
+        <!-- Sign In Form -->
+        <div id="loginForm">
+          <div id="loginError"></div>
+          <div class="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              id="loginUser"
+              placeholder="admin"
+              autocomplete="username"
+            />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              id="loginPass"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+          </div>
+          <button class="login-submit" onclick="doLogin()">Sign In →</button>
+        </div>
 
-h1 {
-  text-align: center;
-  margin-bottom: 20px;
-}
+        <!-- Register Form -->
+        <div id="registerForm" style="display: none">
+          <div id="regError"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="regUser" placeholder="username" />
+            </div>
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" id="regName" placeholder="full name" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" id="regPass" placeholder="••••••••" />
+            </div>
+            <div class="form-group">
+              <label>Confirm Password</label>
+              <input type="password" id="regConfirm" placeholder="••••••••" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select id="regRole">
+              <option value="">Select role...</option>
+              <option value="Super Admin">Super Admin</option>
+              <option value="Safety Officer">Safety Officer</option>
+            </select>
+          </div>
+          <button class="login-submit" onclick="doRegister()">
+            Create Account →
+          </button>
+        </div>
 
-/* CARD STYLE */
-.card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
+        <p class="login-hint">
+          Demo credentials: <strong>admin</strong> / <strong>admin123</strong>
+        </p>
+      </div>
+    </div>
 
-/* INPUTS */
-input {
-  padding: 10px;
-  margin: 5px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  width: 180px;
-}
+    <!-- ═══════════════════════════════════════════════
+       MAIN APP
+  ═══════════════════════════════════════════════ -->
+    <div id="mainApp" class="app" style="display: none">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="logo">
+          <div class="logo-icon">🚸</div>
+          <h1>SafeRoute</h1>
+          <span>Admin Portal</span>
+        </div>
 
-/* BUTTONS */
-button {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: 0.2s;
-}
+        <nav class="nav">
+          <div class="nav-section">Overview</div>
+          <div class="nav-item active" onclick="navigate('dashboard')">
+            <span class="icon">⬛</span> Dashboard
+          </div>
+          <div class="nav-section">Hazards</div>
+          <div class="nav-item" onclick="navigate('hazards')">
+            <span class="icon">⚠</span> All Reports
+          </div>
+          <div class="nav-item" onclick="navigate('report')">
+            <span class="icon">＋</span> New Report
+          </div>
+          <div class="nav-section" id="adminSection">Admin</div>
+          <div class="nav-item" id="accountsNav" onclick="navigate('accounts')">
+            <span class="icon">👥</span> Accounts
+          </div>
+        </nav>
 
-button:hover {
-  opacity: 0.85;
-}
+        <div class="sidebar-bottom">
+          <div class="user-pill">
+            <div class="avatar" id="sidebarAvatar">—</div>
+            <div class="user-info">
+              <div class="name" id="sidebarName">—</div>
+              <div class="role" id="sidebarRole">—</div>
+            </div>
+            <button class="logout-btn" onclick="doLogout()" title="Logout">
+              ↪
+            </button>
+          </div>
+        </div>
+      </aside>
 
-/* COLORS */
-.btn-add { background: #4CAF50; color: white; }
-.btn-update { background: #2196F3; color: white; }
-.btn-delete { background: #f44336; color: white; }
-.btn-edit { background: #ff9800; color: white; }
-.btn-filter { background: #673ab7; color: white; }
+      <!-- MAIN CONTENT -->
+      <div class="main">
+        <!-- DASHBOARD SCREEN -->
+        <div id="screen-dashboard" class="screen active">
+          <div class="topbar">
+            <h2>Dashboard</h2>
+            <div class="topbar-actions">
+              <button class="btn btn-ghost" onclick="loadDashboard()">
+                ↺ Refresh
+              </button>
+            </div>
+          </div>
+          <div class="content" id="dashContent">
+            <div class="loading">
+              <div class="spinner"></div>
+              Loading stats...
+            </div>
+          </div>
+        </div>
 
-/* TABLE */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-}
+        <!-- HAZARDS SCREEN -->
+        <div id="screen-hazards" class="screen">
+          <div class="topbar">
+            <h2>Hazard Reports</h2>
+            <div class="topbar-actions">
+              <button class="btn btn-primary" onclick="openCreateModal()">
+                ＋ New Report
+              </button>
+            </div>
+          </div>
+          <div class="content">
+            <div class="filters">
+              <input
+                type="text"
+                class="search-input"
+                id="searchInput"
+                placeholder="🔍  Search hazards..."
+                oninput="filterHazards()"
+              />
+              <select
+                class="filter-select"
+                id="statusFilter"
+                onchange="filterHazards()"
+              >
+                <option value="">All Status</option>
+                <option value="Open">Open</option>
+                <option value="In-Progress">In-Progress</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+              <select
+                class="filter-select"
+                id="severityFilter"
+                onchange="filterHazards()"
+              >
+                <option value="">All Severity</option>
+                <option value="5">5 – Critical</option>
+                <option value="4">4 – High</option>
+                <option value="3">3 – Medium</option>
+                <option value="2">2 – Low</option>
+                <option value="1">1 – Minimal</option>
+              </select>
+              <select
+                class="filter-select"
+                id="roleFilter"
+                onchange="filterHazards()"
+              >
+                <option value="">All Reporters</option>
+                <option value="Parent">Parent</option>
+                <option value="Teacher">Teacher</option>
+              </select>
+            </div>
 
-th, td {
-  padding: 12px;
-  text-align: left;
-}
+            <div class="table-wrap">
+              <div class="table-header">
+                <h3>Reports</h3>
+                <span class="table-count" id="hazardCount">0 reports</span>
+              </div>
+              <div id="hazardTableBody"></div>
+            </div>
+            <div id="hazardPagination" class="pagination"></div>
+          </div>
+        </div>
 
-th {
-  background: #f0f2f5;
-}
+        <!-- REPORT SCREEN (public form) -->
+        <div id="screen-report" class="screen">
+          <div class="topbar">
+            <h2>Submit Hazard Report</h2>
+          </div>
+          <div class="content">
+            <div class="report-public">
+              <div class="report-card">
+                <h3>🚸 Report a Safety Hazard</h3>
+                <p>
+                  Help keep school routes safe. Anyone can submit a report — no
+                  login required.
+                </p>
 
-tr {
-  border-bottom: 1px solid #eee;
-}
+                <div id="reportError"></div>
+                <div id="reportSuccess"></div>
 
-tr:hover {
-  background: #fafafa;
-}
+                <div class="form-group">
+                  <label>School Name</label>
+                  <input
+                    type="text"
+                    id="repSchool"
+                    placeholder="e.g. Lincoln Elementary"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Hazard Type</label>
+                  <input
+                    type="text"
+                    id="repType"
+                    placeholder="e.g. Broken Crosswalk Light, Pothole, Speeding..."
+                  />
+                </div>
 
-/* FLEX */
-.flex {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-}
+                <div class="form-section-title">Severity Level</div>
+                <div class="sev-picker" id="repSevPicker">
+                  <button class="sev-pick-btn" onclick="selectSev(1)">
+                    1<br /><span>Minimal</span>
+                  </button>
+                  <button class="sev-pick-btn" onclick="selectSev(2)">
+                    2<br /><span>Low</span>
+                  </button>
+                  <button class="sev-pick-btn" onclick="selectSev(3)">
+                    3<br /><span>Medium</span>
+                  </button>
+                  <button class="sev-pick-btn" onclick="selectSev(4)">
+                    4<br /><span>High</span>
+                  </button>
+                  <button class="sev-pick-btn" onclick="selectSev(5)">
+                    5<br /><span>Critical</span>
+                  </button>
+                </div>
 
-.space-between {
-  justify-content: space-between;
-}
+                <div class="form-section-title">Location</div>
+                <div class="form-group">
+                  <label>Address</label>
+                  <input
+                    type="text"
+                    id="repAddr"
+                    placeholder="Street address or landmark"
+                  />
+                </div>
+                <div class="loc-row">
+                  <div class="form-group">
+                    <label>Latitude</label>
+                    <input
+                      type="number"
+                      id="repLat"
+                      placeholder="34.0522"
+                      step="0.0001"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>Longitude</label>
+                    <input
+                      type="number"
+                      id="repLng"
+                      placeholder="-118.2437"
+                      step="0.0001"
+                    />
+                  </div>
+                </div>
 
-</style>
-</head>
+                <div class="form-section-title">Who are you?</div>
+                <div class="reporter-tabs" id="repRolePicker">
+                  <button
+                    class="reporter-tab"
+                    onclick="selectRepRole('Parent')"
+                  >
+                    admin
+                  </button>
+                  <button
+                    class="reporter-tab"
+                    onclick="selectRepRole('Teacher')"
+                  >
+                    officer
+                  </button>
+                </div>
 
-<body>
+                <div class="form-actions">
+                  <button class="btn btn-primary" onclick="submitReport()">
+                    Submit Report
+                  </button>
+                  <button class="btn btn-ghost" onclick="resetReportForm()">
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-<h1>🎮 Game Characters Viewer</h1>
+        <!-- ACCOUNTS SCREEN -->
+        <div id="screen-accounts" class="screen">
+          <div class="topbar">
+            <h2>Admin Accounts</h2>
+          </div>
+          <div class="content">
+            <div id="accountsContent">
+              <div class="loading">
+                <div class="spinner"></div>
+                Loading accounts...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- /main -->
+    </div>
+    <!-- /mainApp -->
 
-<div class="card">
-  <h3>Add / Update Character</h3>
-  <div class="flex">
-    <input type="number" id="id" placeholder="ID (edit)">
-    <input type="text" id="name" placeholder="Name">
-    <input type="text" id="role" placeholder="Role">
-    <input type="text" id="difficulty" placeholder="Difficulty">
-    <input type="number" id="rating" placeholder="Rating">
-  </div>
-  <br>
-  <button class="btn-add" onclick="addCharacter()">Add</button>
-  <button class="btn-update" onclick="updateCharacter()">Update</button>
-</div>
+    <!-- ═══════════════════════════════════════════════
+       HAZARD MODAL (create / edit)
+  ═══════════════════════════════════════════════ -->
+    <div class="modal-overlay hidden" id="hazardModal">
+      <div class="modal">
+        <div class="modal-head">
+          <h3 id="modalTitle">New Hazard Report</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="modalError"></div>
 
-<div class="card">
-  <h3>All Characters</h3>
-  <table id="characters-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Difficulty</th>
-        <th>Rating</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
+          <div class="form-group">
+            <label>School Name</label>
+            <input
+              type="text"
+              id="mSchool"
+              placeholder="e.g. Lincoln Elementary"
+            />
+          </div>
+          <div class="form-group">
+            <label>Hazard Type</label>
+            <input
+              type="text"
+              id="mType"
+              placeholder="e.g. Broken Crosswalk Light"
+            />
+          </div>
 
-<div class="card">
-  <h3>Filter by Role</h3>
-  <input type="text" id="filter-role" placeholder="Enter role">
-  <button class="btn-filter" onclick="filterByRole()">Filter</button>
-  <button class="btn-delete" onclick="deleteByRole()">Delete All</button>
+          <div class="form-section-title">Severity</div>
+          <div class="sev-picker" id="mSevPicker">
+            <button class="sev-pick-btn" onclick="selectModalSev(1)">
+              1<br /><span>Minimal</span>
+            </button>
+            <button class="sev-pick-btn" onclick="selectModalSev(2)">
+              2<br /><span>Low</span>
+            </button>
+            <button class="sev-pick-btn" onclick="selectModalSev(3)">
+              3<br /><span>Medium</span>
+            </button>
+            <button class="sev-pick-btn" onclick="selectModalSev(4)">
+              4<br /><span>High</span>
+            </button>
+            <button class="sev-pick-btn" onclick="selectModalSev(5)">
+              5<br /><span>Critical</span>
+            </button>
+          </div>
 
-  <table id="role-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Difficulty</th>
-        <th>Rating</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
+          <div class="form-section-title">Location</div>
+          <div class="form-group">
+            <label>Address</label>
+            <input
+              type="text"
+              id="mAddr"
+              placeholder="Street address or landmark"
+            />
+          </div>
+          <div class="loc-row">
+            <div class="form-group">
+              <label>Latitude</label>
+              <input
+                type="number"
+                id="mLat"
+                placeholder="34.0522"
+                step="0.0001"
+              />
+            </div>
+            <div class="form-group">
+              <label>Longitude</label>
+              <input
+                type="number"
+                id="mLng"
+                placeholder="-118.2437"
+                step="0.0001"
+              />
+            </div>
+          </div>
 
-<script>
-const API_URL = '/api/characters';
+          <div class="form-section-title">Reporter Role</div>
+          <div class="reporter-tabs" id="mRolePicker">
+            <button class="reporter-tab" onclick="selectModalRole('Parent')">
+              👨‍👩‍👧 Parent
+            </button>
+            <button class="reporter-tab" onclick="selectModalRole('Teacher')">
+              👩‍🏫 Teacher
+            </button>
+          </div>
 
-// LOAD
-async function fetchCharacters() {
-  const res = await fetch(API_URL);
-  const data = await res.json();
+          <div id="editStatusWrap" style="display: none; margin-top: 16px">
+            <div class="form-section-title">Status</div>
+            <select
+              class="filter-select"
+              id="mStatus"
+              style="width: 100%; padding: 10px 14px; font-size: 14px"
+            >
+              <option value="Open">Open</option>
+              <option value="In-Progress">In-Progress</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
 
-  const tbody = document.querySelector('#characters-table tbody');
-  tbody.innerHTML = '';
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+            <button
+              class="btn btn-primary"
+              id="modalSubmitBtn"
+              onclick="submitModal()"
+            >
+              Create Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  data.forEach(c => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${c.id}</td>
-        <td>${c.name}</td>
-        <td>${c.role}</td>
-        <td>${c.difficulty}</td>
-        <td>${c.rating}</td>
-        <td>
-          <button class="btn-edit" onclick="editCharacter(${c.id})">Edit</button>
-          <button class="btn-delete" onclick="deleteCharacter(${c.id})">Delete</button>
-        </td>
-      </tr>
-    `;
-  });
-}
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+      <span class="toast-icon" id="toastIcon">✓</span>
+      <span id="toastMsg">Done</span>
+    </div>
 
-// EDIT
-async function editCharacter(id) {
-  const res = await fetch(`${API_URL}/${id}`);
-  const c = await res.json();
-
-  document.getElementById('id').value = c.id;
-  document.getElementById('name').value = c.name;
-  document.getElementById('role').value = c.role;
-  document.getElementById('difficulty').value = c.difficulty;
-  document.getElementById('rating').value = c.rating;
-}
-
-// GET DATA
-function getFormData() {
-  return {
-    name: document.getElementById('name').value.trim(),
-    role: document.getElementById('role').value.trim(),
-    difficulty: document.getElementById('difficulty').value.trim(),
-    rating: parseFloat(document.getElementById('rating').value) || 0
-  };
-}
-
-// ADD
-async function addCharacter() {
-  const data = getFormData();
-  if (!data.name || !data.role || !data.difficulty) return alert('Fill all fields');
-
-  await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-
-  fetchCharacters();
-  reset();
-}
-
-// UPDATE
-async function updateCharacter() {
-  const id = document.getElementById('id').value;
-  if (!id) return alert('Click Edit first');
-
-  const data = getFormData();
-
-  await fetch(`${API_URL}/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-
-  fetchCharacters();
-  reset();
-}
-
-// DELETE
-async function deleteCharacter(id) {
-  if (!confirm('Delete?')) return;
-  await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-  fetchCharacters();
-}
-
-// FILTER
-async function filterByRole() {
-  const role = document.getElementById('filter-role').value.trim();
-  if (!role) return alert('Enter role');
-
-  const res = await fetch(`${API_URL}/role/${role}`);
-  const data = await res.json();
-
-  const tbody = document.querySelector('#role-table tbody');
-  tbody.innerHTML = '';
-
-  data.forEach(c => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${c.id}</td>
-        <td>${c.name}</td>
-        <td>${c.role}</td>
-        <td>${c.difficulty}</td>
-        <td>${c.rating}</td>
-      </tr>
-    `;
-  });
-}
-
-// DELETE BY ROLE
-async function deleteByRole() {
-  const role = document.getElementById('filter-role').value.trim();
-  if (!role) return alert('Enter role');
-
-  await fetch(`${API_URL}/role/${role}`, { method: 'DELETE' });
-
-  fetchCharacters();
-  document.querySelector('#role-table tbody').innerHTML = '';
-}
-
-// RESET
-function reset() {
-  document.getElementById('id').value = '';
-  document.getElementById('name').value = '';
-  document.getElementById('role').value = '';
-  document.getElementById('difficulty').value = '';
-  document.getElementById('rating').value = '';
-}
-
-fetchCharacters();
-</script>
-
-</body>
+    <script src="script.js"></script>
+  </body>
 </html>
